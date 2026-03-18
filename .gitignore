@@ -1,0 +1,11 @@
+build/
+.vs/
+.vscode/
+**/bin/
+!external/
+!external/**/bin/
+*.exe
+*.pdb
+*.obj
+Thumbs.db
+*.DS_Store

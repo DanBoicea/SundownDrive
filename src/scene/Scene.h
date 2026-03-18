@@ -1,0 +1,35 @@
+#ifndef SUNDOWNDRIVE_SCENE_SCENE_H
+#define SUNDOWNDRIVE_SCENE_SCENE_H
+
+#include "scene/Terrain.h"
+#include "scene/Road.h"
+#include "scene/StaticObject.h"
+#include "rendering/Skybox.h"
+#include "rendering/Renderer.h"
+#include "core/Camera.h"
+#include <vector>
+
+class Scene {
+public:
+    Scene() = default;
+
+    bool init();
+    void update(float deltaTime);
+    void draw();
+
+    Camera&   getCamera()   { return camera_; }
+    Renderer& getRenderer() { return renderer_; }
+
+private:
+    Renderer  renderer_;
+    Camera    camera_;
+    Terrain   terrain_;
+    Skybox    skybox_;
+    Road      road_;
+
+    std::vector<StaticObject> staticObjects_;
+
+    // Future (C1/C2): Car player_, vector<TrafficCar> traffic_;
+};
+
+#endif // SUNDOWNDRIVE_SCENE_SCENE_H
