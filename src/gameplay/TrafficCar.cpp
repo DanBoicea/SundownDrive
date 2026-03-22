@@ -15,5 +15,5 @@ void TrafficCar::update(float /*deltaTime*/) {
 void TrafficCar::draw(Shader& shader) {
     shader.use();
     shader.setMat4("model", transform_.getModelMatrix());
-    model_.draw();
+    model_.draw(shader);
 }

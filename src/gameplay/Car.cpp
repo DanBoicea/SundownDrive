@@ -23,5 +23,5 @@ void Car::update(float /*deltaTime*/) {
 void Car::draw(Shader& shader) {
     shader.use();
     shader.setMat4("model", transform_.getModelMatrix());
-    model_.draw();
+    model_.draw(shader);
 }

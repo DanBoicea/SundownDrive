@@ -16,53 +16,53 @@ float Terrain::rawHeight(float wx, float wz) {
     return h;
 }
 
-// float Terrain::roadMask(float wx, float wz) {
-//     // oval center-line: (x/a)^2 + (z/b)^2 = 1 with a=30, b=20
-//     const float a = 30.0f;
-//     const float b = 20.0f;
-//     const float roadHalf  = 5.0f;  // flat zone half-width (will contain the road)
-//     const float blendZone = 5.0f;  // smooth transition width
+float Terrain::roadMask(float wx, float wz) {
+    // oval center-line: (x/a)^2 + (z/b)^2 = 1 with a=30, b=20
+    const float a = 30.0f;
+    const float b = 20.0f;
+    const float roadHalf  = 5.0f;  // flat zone half-width (will contain the road)
+    const float blendZone = 5.0f;  // smooth transition width
 
-//     // Distance from the oval in "oval-normalised" space:
-//     // For a point P, the closest point on the ellipse is along the radial direction.
-//     // Simplified: compute radial distance from ellipse.
-//     float ex = wx / a;
-//     float ez = wz / b;
-//     float ovalDist = std::sqrt(ex * ex + ez * ez);  // <1 inside, >1 outside
+    // Distance from the oval in "oval-normalised" space:
+    // For a point P, the closest point on the ellipse is along the radial direction.
+    // Simplified: compute radial distance from ellipse.
+    float ex = wx / a;
+    float ez = wz / b;
+    float ovalDist = std::sqrt(ex * ex + ez * ez);  // <1 inside, >1 outside
 
-//     // Distance from the actual oval perimeter (in world units, approximate)
-//     // Radial unit vector in oval space → scale back to world for distance
-//     float perimeterWorld;
-//     if (ovalDist < 0.001f) {
-//         // At center of oval — far from the road
-//         perimeterWorld = std::min(a, b);
-//     } else {
-//         // Direction to closest point on unit circle in oval space
-//         float nx = ex / ovalDist;
-//         float nz = ez / ovalDist;
-//         // Closest point on ellipse in world space
-//         float cx = nx * a;
-//         float cz = nz * b;
-//         float dx = wx - cx;
-//         float dz = wz - cz;
-//         perimeterWorld = std::sqrt(dx * dx + dz * dz);
-//     }
+    // Distance from the actual oval perimeter (in world units, approximate)
+    // Radial unit vector in oval space -> scale back to world for distance
+    float perimeterWorld;
+    if (ovalDist < 0.001f) {
+        // At center of oval - far from the road
+        perimeterWorld = std::min(a, b);
+    } else {
+        // Direction to closest point on unit circle in oval space
+        float nx = ex / ovalDist;
+        float nz = ez / ovalDist;
+        // Closest point on ellipse in world space
+        float cx = nx * a;
+        float cz = nz * b;
+        float dx = wx - cx;
+        float dz = wz - cz;
+        perimeterWorld = std::sqrt(dx * dx + dz * dz);
+    }
 
-//     // perimeterWorld is ~0 on the road, grows away from it
-//     if (perimeterWorld < roadHalf) return 0.0f;
-//     if (perimeterWorld < roadHalf + blendZone) {
-//         float t = (perimeterWorld - roadHalf) / blendZone;
-//         // smoothstep for nice blend
-//         return t * t * (3.0f - 2.0f * t);
-//     }
-//     return 1.0f;
-// }
+    // perimeterWorld is ~0 on the road, grows away from it
+    if (perimeterWorld < roadHalf) return 0.0f;
+    if (perimeterWorld < roadHalf + blendZone) {
+        float t = (perimeterWorld - roadHalf) / blendZone;
+        // smoothstep for nice blend
+        return t * t * (3.0f - 2.0f * t);
+    }
+    return 1.0f;
+}
 
 glm::vec3 Terrain::computeNormal(float wx, float wz, float step) const {
-    float hL = rawHeight(wx - step, wz) /* * roadMask(wx - step, wz) */;
-    float hR = rawHeight(wx + step, wz) /* * roadMask(wx + step, wz) */;
-    float hD = rawHeight(wx, wz - step) /* * roadMask(wx, wz - step) */;
-    float hU = rawHeight(wx, wz + step) /* * roadMask(wx, wz + step) */;
+    float hL = rawHeight(wx - step, wz) * roadMask(wx - step, wz);
+    float hR = rawHeight(wx + step, wz) * roadMask(wx + step, wz);
+    float hD = rawHeight(wx, wz - step) * roadMask(wx, wz - step);
+    float hU = rawHeight(wx, wz + step) * roadMask(wx, wz + step);
     // cross product of tangent vectors gives normal
     glm::vec3 n(hL - hR, 2.0f * step, hD - hU);
     return glm::normalize(n);
@@ -88,7 +88,7 @@ bool Terrain::init(float halfSize, int resolution, const std::string& texturePat
             float wx = -halfSize + x * step;
             float wz = -halfSize + z * step;
 
-            float height = rawHeight(wx, wz) /* * roadMask(wx, wz) */;
+            float height = rawHeight(wx, wz) * roadMask(wx, wz);
             heights_[z * vertsPerRow + x] = height;
 
             Vertex v;

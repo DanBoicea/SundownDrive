@@ -3,9 +3,10 @@
 
 #include "scene/Terrain.h"
 #include "scene/Road.h"
-#include "scene/StaticObject.h"
 #include "rendering/Skybox.h"
 #include "rendering/Renderer.h"
+#include "rendering/Model.h"
+#include "utils/Transform.h"
 #include "core/Camera.h"
 #include <vector>
 
@@ -26,8 +27,8 @@ private:
     Terrain   terrain_;
     Skybox    skybox_;
     Road      road_;
-
-    std::vector<StaticObject> staticObjects_;
+    Model     treeModel_;
+    std::vector<Transform> treeTransforms_;
 
     // Future (C1/C2): Car player_, vector<TrafficCar> traffic_;
 };
