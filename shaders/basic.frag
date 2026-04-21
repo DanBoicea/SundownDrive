@@ -63,8 +63,8 @@ void main() {
         vec3 ldir = toLight / max(dist, 0.0001);
 
         float ndotl = max(dot(norm, ldir), 0.0);
-        float atten = 1.0 / (1.0 + 0.12 * dist + 0.045 * dist * dist);
-        lampTerm += ndotl * atten * pointLightColor[i];
+        float atten = 1.0 / (1.0 + 0.07 * dist + 0.015 * dist * dist);
+        lampTerm += (0.10 + ndotl) * atten * pointLightColor[i];
     }
 
     vec3 result = (ambient + sunTerm + lampTerm) * texColor;

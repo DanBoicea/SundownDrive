@@ -1,0 +1,35 @@
+newmtl aiStandardSurface1SG
+illum 4
+Kd 1.00 1.00 1.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 0.00
+map_Kd ../textures/lamp_pole/lighting_pole_model_1_lamp_part_BaseColor.png
+newmtl aiStandardSurface2SG
+illum 4
+Kd 1.00 1.00 1.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 0.00
+map_Kd ../textures/lamp_pole/lighting_pole_model_1_pole_part_BaseColor.png
+newmtl aiStandardSurface3SG
+illum 4
+Kd 1.00 1.00 1.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 0.00
+map_Kd ../textures/lamp_pole/lighting_pole_model_1_pole_rod_BaseColor.png
+newmtl aiStandardSurface5SG
+illum 4
+Kd 1.00 1.00 1.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 0.00
+map_Kd ../textures/lamp_pole/lighting_pole_model_1_glass_part_BaseColor.png
+newmtl aiStandardSurface6SG
+illum 4
+Kd 1.00 1.00 1.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 0.00
+map_Kd ../textures/lamp_pole/lighting_pole_model_1_lighting_pole_BaseColor.png

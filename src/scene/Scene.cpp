@@ -9,47 +9,6 @@
 #include <vector>
 
 namespace {
-Mesh createUnitBoxMesh() {
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
-    vertices.reserve(24);
-    indices.reserve(36);
-
-    auto addFace = [&](const glm::vec3& n, const glm::vec3& v0, const glm::vec3& v1,
-                       const glm::vec3& v2, const glm::vec3& v3) {
-        unsigned int base = static_cast<unsigned int>(vertices.size());
-        vertices.push_back(Vertex{v0, n, glm::vec2(0.0f, 0.0f)});
-        vertices.push_back(Vertex{v1, n, glm::vec2(1.0f, 0.0f)});
-        vertices.push_back(Vertex{v2, n, glm::vec2(1.0f, 1.0f)});
-        vertices.push_back(Vertex{v3, n, glm::vec2(0.0f, 1.0f)});
-
-        indices.push_back(base + 0);
-        indices.push_back(base + 1);
-        indices.push_back(base + 2);
-        indices.push_back(base + 0);
-        indices.push_back(base + 2);
-        indices.push_back(base + 3);
-    };
-
-    const glm::vec3 p000(-0.5f, -0.5f, -0.5f);
-    const glm::vec3 p001(-0.5f, -0.5f,  0.5f);
-    const glm::vec3 p010(-0.5f,  0.5f, -0.5f);
-    const glm::vec3 p011(-0.5f,  0.5f,  0.5f);
-    const glm::vec3 p100( 0.5f, -0.5f, -0.5f);
-    const glm::vec3 p101( 0.5f, -0.5f,  0.5f);
-    const glm::vec3 p110( 0.5f,  0.5f, -0.5f);
-    const glm::vec3 p111( 0.5f,  0.5f,  0.5f);
-
-    addFace(glm::vec3(0, 0, 1),  p001, p101, p111, p011);
-    addFace(glm::vec3(0, 0, -1), p100, p000, p010, p110);
-    addFace(glm::vec3(1, 0, 0),  p101, p100, p110, p111);
-    addFace(glm::vec3(-1, 0, 0), p000, p001, p011, p010);
-    addFace(glm::vec3(0, 1, 0),  p011, p111, p110, p010);
-    addFace(glm::vec3(0, -1, 0), p000, p100, p101, p001);
-
-    return Mesh(vertices, indices);
-}
-
 bool isInsideOval(float x, float z) {
     constexpr float a = 30.0f;
     constexpr float b = 20.0f;
@@ -93,12 +52,9 @@ bool Scene::init() {
         return false;
     }
 
-    lampPoleMesh_ = createUnitBoxMesh();
-    if (!lampPoleTexture_.load2D("assets/textures/model_tree/bark.jpg")) {
-        lampPoleTexture_.load2D("assets/textures/road.jpg");
-    }
-    if (!lampGlowTexture_.load2D("assets/textures/lamp_glow.ppm", false)) {
-        lampGlowTexture_.load2D("assets/textures/road.jpg");
+    if (!streetLampModel_.load("assets/models/street_lamp.obj")) {
+        std::cerr << "[Scene] Street lamp model load failed: assets/models/street_lamp.obj" << std::endl;
+        return false;
     }
 
     std::mt19937 rng(1337u);
@@ -148,14 +104,16 @@ bool Scene::init() {
         }
     }
 
-    lampPoleTransforms_.clear();
-    lampHeadTransforms_.clear();
+    streetLampTransforms_.clear();
     lampLightPositions_.clear();
     constexpr int poleCount = 8;
     constexpr float a = 30.0f;
     constexpr float b = 20.0f;
     constexpr float inwardOffset = 5.0f;
-    constexpr float poleHeight = 6.6f;
+    constexpr float lampScale = 2.8f;
+    constexpr float lampMinY = 0.017458f;
+    constexpr float lampHeight = 2.378824f - 0.017458f;
+    constexpr float worldLampHeight = lampHeight * lampScale;
 
     for (int i = 0; i < poleCount; ++i) {
         float t = 2.0f * 3.14159265f * static_cast<float>(i) / static_cast<float>(poleCount);
@@ -165,18 +123,14 @@ bool Scene::init() {
         basePos.y = terrain_.getHeightAt(basePos.x, basePos.z);
 
         Transform pole;
-        pole.position = basePos + glm::vec3(0.0f, poleHeight * 0.5f, 0.0f);
-        pole.rotation.y = -glm::degrees(std::atan2(toCenter.z, toCenter.x));
-        pole.scale = glm::vec3(0.55f, poleHeight, 0.55f);
-        lampPoleTransforms_.push_back(pole);
+        pole.position = basePos;
+        pole.position.y -= lampMinY * lampScale;
+        pole.rotation.y = -glm::degrees(std::atan2(toCenter.z, toCenter.x)) - 90.0f;
+        pole.scale = glm::vec3(lampScale);
+        streetLampTransforms_.push_back(pole);
 
-        glm::vec3 lampLightPos = basePos + glm::vec3(0.0f, poleHeight + 0.35f, 0.0f);
+        glm::vec3 lampLightPos = basePos + glm::vec3(0.0f, worldLampHeight + 0.25f, 0.0f);
         lampLightPositions_.push_back(lampLightPos);
-
-        Transform head;
-        head.position = lampLightPos;
-        head.scale = glm::vec3(0.75f, 0.45f, 0.75f);
-        lampHeadTransforms_.push_back(head);
     }
 
     return true;
@@ -215,13 +169,9 @@ void Scene::draw() {
         treeModel_.draw(shadow);
     }
 
-    for (const auto& pole : lampPoleTransforms_) {
+    for (const auto& pole : streetLampTransforms_) {
         shadow.setMat4("model", pole.getModelMatrix());
-        lampPoleMesh_.draw();
-    }
-    for (const auto& head : lampHeadTransforms_) {
-        shadow.setMat4("model", head.getModelMatrix());
-        lampPoleMesh_.draw();
+        streetLampModel_.draw(shadow);
     }
 
     renderer_.endShadowPass();
@@ -249,26 +199,16 @@ void Scene::draw() {
     basic.setInt("pointLightCount", activeLampCount);
     for (int i = 0; i < activeLampCount; ++i) {
         basic.setVec3("pointLightPos[" + std::to_string(i) + "]", lampLightPositions_[i]);
-        basic.setVec3("pointLightColor[" + std::to_string(i) + "]", glm::vec3(1.0f, 0.82f, 0.58f));
+        basic.setVec3("pointLightColor[" + std::to_string(i) + "]", glm::vec3(2.10f, 1.70f, 1.20f));
     }
 
     // Draw scene objects
     terrain_.draw(basic);
     road_.draw(basic);
 
-    lampPoleTexture_.bind(GL_TEXTURE0);
-    basic.setInt("textureSampler", 0);
-    basic.setBool("useAlphaCutout", false);
-    for (const auto& pole : lampPoleTransforms_) {
+    for (const auto& pole : streetLampTransforms_) {
         basic.setMat4("model", pole.getModelMatrix());
-        lampPoleMesh_.draw();
-    }
-
-    lampGlowTexture_.bind(GL_TEXTURE0);
-    basic.setInt("textureSampler", 0);
-    for (const auto& head : lampHeadTransforms_) {
-        basic.setMat4("model", head.getModelMatrix());
-        lampPoleMesh_.draw();
+        streetLampModel_.draw(basic);
     }
 
     for (const auto& tree : treeTransforms_) {
