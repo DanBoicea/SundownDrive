@@ -6,8 +6,11 @@
 #include "rendering/Skybox.h"
 #include "rendering/Renderer.h"
 #include "rendering/Model.h"
+#include "rendering/Mesh.h"
+#include "rendering/Texture.h"
 #include "utils/Transform.h"
 #include "core/Camera.h"
+#include <glm/glm.hpp>
 #include <vector>
 
 class Scene {
@@ -29,6 +32,12 @@ private:
     Road      road_;
     Model     treeModel_;
     std::vector<Transform> treeTransforms_;
+    Mesh      lampPoleMesh_;
+    Texture   lampPoleTexture_;
+    Texture   lampGlowTexture_;
+    std::vector<Transform> lampPoleTransforms_;
+    std::vector<Transform> lampHeadTransforms_;
+    std::vector<glm::vec3> lampLightPositions_;
 
     // Future (C1/C2): Car player_, vector<TrafficCar> traffic_;
 };
