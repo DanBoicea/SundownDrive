@@ -6,6 +6,8 @@
 #include "rendering/Skybox.h"
 #include "rendering/Renderer.h"
 #include "rendering/Model.h"
+#include "rendering/Mesh.h"
+#include "rendering/Texture.h"
 #include "utils/Transform.h"
 #include "core/Camera.h"
 #include <glm/glm.hpp>
@@ -30,6 +32,12 @@ private:
     Road      road_;
     Model     treeModel_;
     Model     streetLampModel_;
+    Mesh      lampGlowMesh_;
+    Texture   lampGlowTex_;
+    float     lampGlowSize_ = 0.6f;
+    Mesh      placeholderMesh_;
+    Texture   placeholderTex_;
+    std::vector<Transform> placeholderTransforms_;
     std::vector<Transform> treeTransforms_;
     std::vector<Transform> streetLampTransforms_;
     std::vector<glm::vec3> lampLightPositions_;

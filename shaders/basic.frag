@@ -13,6 +13,9 @@ uniform bool useAlphaCutout = false;
 uniform int pointLightCount = 0;
 uniform vec3 pointLightPos[32];
 uniform vec3 pointLightColor[32];
+uniform int pointShadowCount = 0;
+uniform samplerCube pointShadowMap[8];
+uniform float pointShadowFar = 60.0;
 
 // Simple directional "sun" light — will be expanded in P3
 uniform vec3 lightDir   = vec3(-0.5, -0.8, -0.3);  // direction TO the light
@@ -41,6 +44,33 @@ float calcShadow(vec4 fragPosLightSpace, vec3 normal, vec3 lightDirection) {
     return shadow / 9.0;
 }
 
+float calcPointShadow(int idx, vec3 fragPos, vec3 normal) {
+    if (idx >= pointShadowCount) {
+        return 0.0;
+    }
+
+    vec3 toFrag = fragPos - pointLightPos[idx];
+    float currentDepth = length(toFrag);
+    vec3 dir = toFrag / max(currentDepth, 0.0001);
+
+    float bias = max(0.02 * (1.0 - dot(normal, -dir)), 0.005);
+    float shadow = 0.0;
+    float diskRadius = 0.06 * (currentDepth / pointShadowFar);
+
+    for (int i = 0; i < 4; ++i) {
+        vec3 offset = vec3(
+            (i == 0 || i == 3) ? 1.0 : -1.0,
+            (i < 2) ? 1.0 : -1.0,
+            (i == 0 || i == 2) ? 1.0 : -1.0
+        );
+        float closestDepth = texture(pointShadowMap[idx], toFrag + offset * diskRadius).r;
+        closestDepth *= pointShadowFar;
+        shadow += (currentDepth - bias > closestDepth) ? 1.0 : 0.0;
+    }
+
+    return shadow * 0.25;
+}
+
 void main() {
     vec3 norm = normalize(Normal);
     vec3 dir  = normalize(-lightDir);
@@ -64,7 +94,8 @@ void main() {
 
         float ndotl = max(dot(norm, ldir), 0.0);
         float atten = 1.0 / (1.0 + 0.07 * dist + 0.015 * dist * dist);
-        lampTerm += (0.10 + ndotl) * atten * pointLightColor[i];
+        float lampShadow = calcPointShadow(i, FragPos, norm);
+        lampTerm += (0.10 + ndotl) * atten * pointLightColor[i] * (1.0 - lampShadow);
     }
 
     vec3 result = (ambient + sunTerm + lampTerm) * texColor;
