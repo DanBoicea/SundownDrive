@@ -51,6 +51,21 @@ void Camera::setTarget(const glm::vec3& targetPos, float targetYaw) {
     up_       = glm::normalize(glm::cross(right_, front_));
 }
 
+void Camera::setOrbitTarget(const glm::vec3& targetPos, float yawDeg, float pitchDeg, float distance, float heightOffset) {
+    float yawRad = glm::radians(yawDeg);
+    float pitchRad = glm::radians(pitchDeg);
+
+    glm::vec3 offset;
+    offset.x = distance * std::cos(pitchRad) * std::cos(yawRad);
+    offset.z = distance * std::cos(pitchRad) * std::sin(yawRad);
+    offset.y = distance * std::sin(pitchRad) + heightOffset;
+
+    position_ = targetPos + offset;
+    front_    = glm::normalize(targetPos - position_);
+    right_    = glm::normalize(glm::cross(front_, glm::vec3(0, 1, 0)));
+    up_       = glm::normalize(glm::cross(right_, front_));
+}
+
 void Camera::updateVectors() {
     glm::vec3 f;
     f.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));

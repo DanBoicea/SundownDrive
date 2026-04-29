@@ -2,6 +2,7 @@
 #define SUNDOWNDRIVE_RENDERING_MODEL_H
 
 #include "rendering/Mesh.h"
+#include <glm/glm.hpp>
 #include "rendering/Texture.h"
 #include "core/Shader.h"
 #include <string>
@@ -19,6 +20,8 @@ public:
     void draw(Shader& shader) const;
 
     const std::vector<Mesh>& getMeshes() const { return meshes_; }
+    const glm::vec3& getBoundsMin() const { return boundsMin_; }
+    const glm::vec3& getBoundsMax() const { return boundsMax_; }
 
 private:
     struct SubMesh {
@@ -31,6 +34,9 @@ private:
     std::vector<Texture> materialTextures_;
     std::vector<bool>    materialHasTexture_;
     std::vector<bool>    materialAlphaCutout_;
+    std::vector<glm::vec3> materialDiffuse_;
+    glm::vec3 boundsMin_{0.0f};
+    glm::vec3 boundsMax_{0.0f};
 };
 
 #endif // SUNDOWNDRIVE_RENDERING_MODEL_H

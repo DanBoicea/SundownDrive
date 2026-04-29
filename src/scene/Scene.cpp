@@ -1,5 +1,6 @@
 #include "scene/Scene.h"
 #include "core/Input.h"
+#include "gameplay/Collision.h"
 #include "utils/Constants.h"
 
 #include <GL/glew.h>
@@ -11,6 +12,20 @@
 #include <vector>
 
 namespace {
+AABB makeAABB(const glm::vec3& base, const glm::vec3& half, float height) {
+    AABB box;
+    box.min = glm::vec3(base.x - half.x, base.y, base.z - half.z);
+    box.max = glm::vec3(base.x + half.x, base.y + height, base.z + half.z);
+    return box;
+}
+
+AABB makeCenterAABB(const glm::vec3& center, const glm::vec3& half) {
+    AABB box;
+    box.min = center - half;
+    box.max = center + half;
+    return box;
+}
+
 bool isInsideOval(float x, float z) {
     constexpr float a = 30.0f;
     constexpr float b = 20.0f;
@@ -68,6 +83,12 @@ bool Scene::init() {
         std::cerr << "[Scene] Lamp glow texture load failed" << std::endl;
         return false;
     }
+
+    if (!playerCar_.init("assets/models/Car.obj")) {
+        std::cerr << "[Scene] Player car init failed" << std::endl;
+        return false;
+    }
+
 
     {
         std::vector<Vertex> verts(4);
@@ -219,6 +240,32 @@ bool Scene::init() {
         placeholderTransforms_.push_back(t);
     }
 
+    playerCar_.setFallbackMesh(&placeholderMesh_, &placeholderTex_);
+    playerCar_.getTransform().scale = glm::vec3(1.6f);
+    playerCar_.getTransform().rotation.y = 90.0f;
+    playerCar_.getTransform().position = glm::vec3(0.0f, terrain_.getHeightAt(0.0f, 0.0f) + carGroundOffset_ + 6.0f, -8.0f);
+    carVerticalVel_ = 0.0f;
+    carGrounded_ = false;
+
+    staticColliders_.clear();
+    staticColliders_.reserve(treeTransforms_.size() + streetLampTransforms_.size() + placeholderTransforms_.size());
+    for (const auto& tree : treeTransforms_) {
+        float radius = 0.6f * tree.scale.x;
+        float height = 3.5f * tree.scale.y;
+        staticColliders_.push_back(makeAABB(tree.position, glm::vec3(radius, 0.0f, radius), height));
+    }
+
+    for (const auto& pole : streetLampTransforms_) {
+        float radius = 0.28f * pole.scale.x;
+        float height = 2.4f * pole.scale.y;
+        staticColliders_.push_back(makeAABB(pole.position, glm::vec3(radius, 0.0f, radius), height));
+    }
+
+    for (const auto& box : placeholderTransforms_) {
+        glm::vec3 half = box.scale * 0.5f;
+        staticColliders_.push_back(makeCenterAABB(box.position, half));
+    }
+
     if (!renderer_.initPointLightShadows(static_cast<int>(lampLightPositions_.size()))) {
         std::cerr << "[Scene] Failed to init point light shadows" << std::endl;
         return false;
@@ -228,14 +275,59 @@ bool Scene::init() {
 }
 
 void Scene::update(float deltaTime) {
-    if (Input::isKeyDown('w')) camera_.processKeyboard(0, deltaTime);
-    if (Input::isKeyDown('s')) camera_.processKeyboard(1, deltaTime);
-    if (Input::isKeyDown('a')) camera_.processKeyboard(2, deltaTime);
-    if (Input::isKeyDown('d')) camera_.processKeyboard(3, deltaTime);
+    glm::vec3 prevPos = playerCar_.getTransform().position;
+    if (carGrounded_) {
+        playerCar_.update(deltaTime);
+    }
+
+    glm::vec3& carPos = playerCar_.getTransform().position;
+    playerCar_.getTransform().rotation.x = 0.0f;
+    playerCar_.getTransform().rotation.z = 0.0f;
+    float minY = playerCar_.getModelMinY();
+    float maxY = playerCar_.getModelMaxY();
+    float minX = playerCar_.getModelMinX();
+    float maxX = playerCar_.getModelMaxX();
+    float minZ = playerCar_.getModelMinZ();
+    float maxZ = playerCar_.getModelMaxZ();
+    float groundY = terrain_.getHeightAt(carPos.x, carPos.z) - minY * playerCar_.getTransform().scale.y + carGroundOffset_;
+    if (!carGrounded_) {
+        carVerticalVel_ -= 18.0f * deltaTime;
+        carPos.y += carVerticalVel_ * deltaTime;
+        if (carPos.y <= groundY) {
+            carPos.y = groundY;
+            carVerticalVel_ = 0.0f;
+            carGrounded_ = true;
+        }
+    } else {
+        carPos.y = groundY;
+    }
+
+
+    glm::vec3 scale = playerCar_.getTransform().scale;
+    float modelHeight = (maxY - minY) * scale.y;
+    float modelWidth = (maxX - minX) * scale.x;
+    float modelLength = (maxZ - minZ) * scale.z;
+    glm::vec3 carHalf(modelWidth * 0.35f, modelHeight * 0.36f, modelLength * 0.5f);
+    AABB carBox = makeCenterAABB(carPos + glm::vec3(0.0f, carHalf.y, 0.0f), carHalf);
+    for (const auto& box : staticColliders_) {
+        if (Collision::testAABB(carBox, box)) {
+            carPos.x = prevPos.x;
+            carPos.z = prevPos.z;
+            carPos.y = groundY;
+            break;
+        }
+    }
 
     int dx = Input::getMouseDeltaX();
     int dy = Input::getMouseDeltaY();
-    if (dx || dy) camera_.processMouse(static_cast<float>(dx), static_cast<float>(dy));
+    if (dx || dy) {
+        orbitYaw_ += static_cast<float>(dx) * 0.2f;
+        orbitPitch_ -= static_cast<float>(dy) * 0.2f;
+        orbitPitch_ = std::clamp(orbitPitch_, -10.0f, 75.0f);
+    }
+
+    camera_.setMode(Camera::Mode::THIRD_PERSON);
+    camera_.setOrbitTarget(carPos, orbitYaw_, orbitPitch_, orbitDistance_, orbitHeight_);
 
     if (Input::isKeyPressed(27)) {
         Input::setMouseCaptured(!Input::isMouseCaptured());
@@ -387,6 +479,8 @@ void Scene::draw() {
         basic.setMat4("model", tree.getModelMatrix());
         treeModel_.draw(basic);
     }
+
+    playerCar_.draw(basic);
 
     // Lamp glow billboards (visual light sources)
     Shader& emissive = renderer_.getEmissiveShader();

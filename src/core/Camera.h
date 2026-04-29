@@ -28,6 +28,7 @@ public:
 
     // Third-person target
     void setTarget(const glm::vec3& targetPos, float targetYaw);
+    void setOrbitTarget(const glm::vec3& targetPos, float yawDeg, float pitchDeg, float distance, float heightOffset);
     void setMode(Mode mode) { mode_ = mode; }
     Mode getMode() const   { return mode_; }
 
@@ -38,10 +39,10 @@ private:
     float     pitch_ =  -15.0f;
     float     speed_ =  8.0f;
     float     sensitivity_ = 0.15f;
-    float     fov_   = 45.0f;
+    float     fov_   = 60.0f;
 
     // Third-person offset behind & above the target
-    glm::vec3 followOffset_ {0.0f, 3.0f, 7.0f};
+    glm::vec3 followOffset_ {0.0f, 4.0f, 10.0f};
 
     glm::vec3 front_, right_, up_;
     void updateVectors();

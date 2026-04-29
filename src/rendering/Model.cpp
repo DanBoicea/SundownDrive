@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <unordered_map>
+#include <limits>
 
 bool Model::load(const std::string& objPath) {
     meshes_.clear();
@@ -16,6 +17,7 @@ bool Model::load(const std::string& objPath) {
     materialTextures_.clear();
     materialHasTexture_.clear();
     materialAlphaCutout_.clear();
+    materialDiffuse_.clear();
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -33,11 +35,25 @@ bool Model::load(const std::string& objPath) {
         std::cerr << "[Model] Warning: " << warn << std::endl;
     }
 
+    boundsMin_ = glm::vec3(std::numeric_limits<float>::max());
+    boundsMax_ = glm::vec3(std::numeric_limits<float>::lowest());
+    for (size_t i = 0; i + 2 < attrib.vertices.size(); i += 3) {
+        glm::vec3 p(attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2]);
+        boundsMin_.x = std::min(boundsMin_.x, p.x);
+        boundsMin_.y = std::min(boundsMin_.y, p.y);
+        boundsMin_.z = std::min(boundsMin_.z, p.z);
+        boundsMax_.x = std::max(boundsMax_.x, p.x);
+        boundsMax_.y = std::max(boundsMax_.y, p.y);
+        boundsMax_.z = std::max(boundsMax_.z, p.z);
+    }
+
     materialTextures_.resize(materials.size());
     materialHasTexture_.assign(materials.size(), false);
     materialAlphaCutout_.assign(materials.size(), false);
+    materialDiffuse_.resize(materials.size(), glm::vec3(1.0f));
 
     for (size_t i = 0; i < materials.size(); ++i) {
+        materialDiffuse_[i] = glm::vec3(materials[i].diffuse[0], materials[i].diffuse[1], materials[i].diffuse[2]);
         const std::string& texName = materials[i].diffuse_texname;
         if (texName.empty()) {
             continue;
@@ -145,19 +161,34 @@ void Model::draw(Shader& shader) const {
 
     for (const auto& sub : subMeshes_) {
         int matId = sub.materialId;
-        if (matId < 0 || matId >= static_cast<int>(materialHasTexture_.size()) || !materialHasTexture_[matId]) {
-            matId = fallbackMaterial;
+        if (matId < 0 || matId >= static_cast<int>(materialHasTexture_.size())) {
+            matId = -1;
         }
 
         bool useAlphaCutout = false;
+        bool useTexture = false;
+        glm::vec3 materialColor(1.0f);
         if (matId >= 0) {
-            materialTextures_[matId].bind(GL_TEXTURE0);
+            if (materialHasTexture_[matId]) {
+                materialTextures_[matId].bind(GL_TEXTURE0);
+                shader.setInt("textureSampler", 0);
+                useAlphaCutout = materialAlphaCutout_[matId];
+                useTexture = true;
+            } else if (matId < static_cast<int>(materialDiffuse_.size())) {
+                materialColor = materialDiffuse_[matId];
+            }
+        } else if (fallbackMaterial >= 0) {
+            materialTextures_[fallbackMaterial].bind(GL_TEXTURE0);
             shader.setInt("textureSampler", 0);
-            useAlphaCutout = materialAlphaCutout_[matId];
+            useAlphaCutout = materialAlphaCutout_[fallbackMaterial];
+            useTexture = true;
         }
+        shader.setBool("useTexture", useTexture);
+        shader.setVec3("materialColor", materialColor);
         shader.setBool("useAlphaCutout", useAlphaCutout);
         sub.mesh.draw();
     }
 
     shader.setBool("useAlphaCutout", false);
+    shader.setBool("useTexture", true);
 }

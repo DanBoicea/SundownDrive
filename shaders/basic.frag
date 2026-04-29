@@ -9,6 +9,8 @@ out vec4 FragColor;
 
 uniform sampler2D textureSampler;
 uniform sampler2D shadowMap;
+uniform bool useTexture = true;
+uniform vec3 materialColor = vec3(1.0);
 uniform bool useAlphaCutout = false;
 uniform int pointLightCount = 0;
 uniform vec3 pointLightPos[32];
@@ -76,8 +78,8 @@ void main() {
     vec3 dir  = normalize(-lightDir);
     float diff = max(dot(norm, dir), 0.0);
 
-    vec4 texel = texture(textureSampler, TexCoords);
-    if (useAlphaCutout && texel.a < 0.3) {
+    vec4 texel = useTexture ? texture(textureSampler, TexCoords) : vec4(materialColor, 1.0);
+    if (useAlphaCutout && useTexture && texel.a < 0.3) {
         discard;
     }
 

@@ -8,6 +8,8 @@
 #include "rendering/Model.h"
 #include "rendering/Mesh.h"
 #include "rendering/Texture.h"
+#include "gameplay/Car.h"
+#include "gameplay/Collision.h"
 #include "utils/Transform.h"
 #include "core/Camera.h"
 #include <glm/glm.hpp>
@@ -38,6 +40,15 @@ private:
     Mesh      placeholderMesh_;
     Texture   placeholderTex_;
     std::vector<Transform> placeholderTransforms_;
+    Car       playerCar_;
+    float     carGroundOffset_ = 0.05f;
+    float     carVerticalVel_ = 0.0f;
+    bool      carGrounded_ = false;
+    float     orbitYaw_ = -90.0f;
+    float     orbitPitch_ = 20.0f;
+    float     orbitDistance_ = 12.0f;
+    float     orbitHeight_ = 2.0f;
+    std::vector<AABB> staticColliders_;
     std::vector<Transform> treeTransforms_;
     std::vector<Transform> streetLampTransforms_;
     std::vector<glm::vec3> lampLightPositions_;
